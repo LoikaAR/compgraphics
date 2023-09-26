@@ -35,18 +35,18 @@ class Object;
 /**
  Structure representing the even of hitting an object
  */
-struct Hit{
-    bool hit; ///< Boolean indicating whether there was or there was no intersection with an object
-    glm::vec3 normal; ///< Normal vector of the intersected object at the intersection point
-    glm::vec3 intersection; ///< Point of Intersection
-    float distance; ///< Distance from the origin of the ray to the intersection point
-    Object *object; ///< A pointer to the intersected object
+struct Hit {
+	bool hit;				///< Boolean indicating whether there was or there was no intersection with an object
+	glm::vec3 normal;		///< Normal vector of the intersected object at the intersection point
+	glm::vec3 intersection; ///< Point of Intersection
+	float distance;			///< Distance from the origin of the ray to the intersection point
+	Object *object;			///< A pointer to the intersected object
 };
 
 /**
  General class for the object
  */
-class Object{
+class Object {
 public:
 	glm::vec3 color; ///< Color of the object
 	/** A function computing an intersection, which returns the structure Hit */
@@ -72,22 +72,41 @@ public:
 		this->color = color;
     }
 	/** Implementation of the intersection function*/
-    Hit intersect(Ray ray){
+    Hit intersect(Ray ray) {
 		
 		Hit hit;
 		hit.hit = false;
 		
-		/* -------------------------------------------------
-		 
-		Place for your code: ray-sphere intersection. Remember to set all the fields of the hit structure:
+		// Place for your code: ray-sphere intersection. Remember to set all the fields of the hit structure:
 
-		 hit.intersection =
-		 hit.normal =
-		 hit.distance =
-		 hit.object = this;
+		// we are looking for td
+		glm::vec3 c = center - ray.origin;
+		float a = glm::dot(c, ray.direction);
+
+		float D = sqrt(glm::dot(c, c) - a*a);
+
+		float t1;
+		float t2;
+		float first_t;
+
+		if (D > radius) {
+			return hit;
+		} else if (D < radius) {
+			t1 = a - sqrt(radius*radius - D*D);
+			// t2 = glm::dot(c, ray.direction) + sqrt(radius*radius - D*D);
+			if (t1 >= 0) first_t = t1;
+			else first_t = a + sqrt(radius*radius - D*D); // to keep the smallest +ve
+		} else {
+			first_t = a + sqrt(radius*radius - D*D);
+		}
+
+		
+		hit.hit = true;
+		hit.distance = first_t;
+		hit.intersection = ray.origin + hit.distance*ray.direction;
+		hit.normal = glm::normalize(hit.intersection-center);
+		hit.object = this;
 		 
-		------------------------------------------------- */
-        
 		return hit;
     }
 };
@@ -109,16 +128,16 @@ glm::vec3 trace_ray(Ray ray){
 	closest_hit.distance = INFINITY;
 	
 	//Loop over all objects to find the closest intersection
-	for(int k = 0; k<objects.size(); k++){
+	for (int k = 0; k < objects.size(); k++) {
 		Hit hit = objects[k]->intersect(ray);
-		if(hit.hit == true && hit.distance < closest_hit.distance)
+		if (hit.hit == true && hit.distance < closest_hit.distance)
 			closest_hit = hit;
 	}
-	
+
 	glm::vec3 color;
-	if(closest_hit.hit){
+	if (closest_hit.hit) {
 		color = closest_hit.object->color;
-	}else{
+	} else {
 		color = glm::vec3(0.0, 0.0, 0.0);
 	}
 	return color;
@@ -126,14 +145,14 @@ glm::vec3 trace_ray(Ray ray){
 /**
  Function defining the scene
  */
-void sceneDefinition (){
+void sceneDefinition () {
 	// first sphere (Excercise 1)
-	objects.push_back(new Sphere(1.0, glm::vec3(-0,-2,8), glm::vec3(0.6, 0.9, 0.6)));
-	
-	/* -------------------------------------------------
-	 
-	Place for your code: additional sphere (Excercise 2)
-	 
+	objects.push_back(new Sphere(1.0, glm::vec3(1, -2, 8), glm::vec3(0.6, 0.9, 0.6)));
+
+	objects.push_back(new Sphere(1.0, glm::vec3(-0, -2, 8), glm::vec3(0.6, 0.6, 0.9)));
+
+	/* -------------------------------------------------	 
+	Place for your code: additional sphere (Excercise 2) 
 	------------------------------------------------- */
 
 }
@@ -142,7 +161,7 @@ int main(int argc, const char * argv[]) {
 	
     clock_t t = clock(); // variable for keeping the time of the rendering
     
-    int width = 1024; //width of the image
+    int width = 1024; // width of the image
     int height = 768; // height of the image
     float fov = 90; // field of view
 	
@@ -151,40 +170,36 @@ int main(int argc, const char * argv[]) {
 	Image image(width,height); // Create an image where we will store the result
     
     /* -------------------------------------------------
-	 
 	Place for your code: Loop over pixels to form and traverse the rays through the scene
-	 
 	------------------------------------------------- */
-    
-    for(int i = 0; i < width ; i++)
-        for(int j = 0; j < height ; j++){
-            
-			/*
-			 
-			Place for your code: ray definition for pixel (i,j), ray traversal
-			 
-			*/
-			
+	float s = 2*tan(0.5*fov) / width; // pixel size
+
+	float X = -(width*s)/2;
+	float Y = (height*s)/2;
+	float Z = 1;
+
+	for (int i = 0; i < width; i++)
+		for (int j = 0; j < height; j++) {
+			// Place for your code: ray definition for pixel (i,j), ray traversal
+			float dx = X + i*s + 0.5*s;
+			float dy = Y - j*s - 0.5*s;
+
 			//Definition of the ray
-			//glm::vec3 origin(0, 0, 0);
-            //glm::vec3 direction(?, ?, ?);               // fill in the correct values
-            //direction = glm::normalize(direction);
-            
-            //Ray ray(origin, direction);  // ray traversal
-			
-			//image.setPixel(i, j, trace_ray(ray));
-        }
-    
-    t = clock() - t;
+			glm::vec3 origin(0, 0, 0);
+            glm::vec3 direction = glm::normalize(glm::vec3(dx, dy, Z));
+			Ray ray(origin, direction); // ray traversal
+			image.setPixel(i, j, trace_ray(ray));
+		}
+
+	t = clock() - t;
     cout<<"It took " << ((float)t)/CLOCKS_PER_SEC<< " seconds to render the image."<< endl;
     cout<<"I could render at "<< (float)CLOCKS_PER_SEC/((float)t) << " frames per second."<<endl;
     
 	// Writing the final results of the rendering
 	if (argc == 2){
 		image.writeImage(argv[2]);
-	}else{
+	} else {
 		image.writeImage("./result.ppm");
 	}
-	
-    return 0;
+	return 0;
 }

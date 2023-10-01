@@ -153,18 +153,29 @@ vector<Object *> objects; ///< A list of all objects in the scene
 */
 glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction, Material material){
 	
-	
 	glm::vec3 color(0.0);
 	
 	/*
-				 
 	 Assignment 2
 	 
 	 Phong model.
-	 Your code should implement a loop over all the lightsourses in the array lights and agredate the contribution of each of them to the final color of the object.
+	 Your code should implement a loop over all the light sourses in the array lights and agredate the contribution of each of them to the final color of the object.
 	 Outside of the loop add also the ambient component from ambient_light.
-				 
 	*/
+
+	for (auto light : lights) {
+		// calculate total contribution of each light
+		glm::vec3 light_dir = glm::normalize(point - light->position);
+		glm::vec3 reflect_dir = glm::reflect(-light_dir, normal);
+		float first_p = dot(view_direction, reflect_dir) < 0.0 ? 0.0 : dot(view_direction, reflect_dir);
+		
+		float diff = glm::dot(normal, light_dir) < 0.0 ? 0.0 : glm::dot(normal, light_dir);
+		float spec = pow(first_p, material.shininess);
+		color += diff;
+		color += spec;
+	}
+
+	// color += ambient_light;
 	
 	// The final color has to be clamped so the values do not go beyond 0 and 1.
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
@@ -191,17 +202,16 @@ glm::vec3 trace_ray(Ray ray){
 	
 	glm::vec3 color(0.0);
 		
-	if(closest_hit.hit){
-		color = closest_hit.object->color;
+	if(closest_hit.hit) {
+		// color = closest_hit.object->color;
 		/*
-					 
 		 Assignment 2
 		 
 		 Replace the above line of the code with the call of the function for computing Phong model below.
-					 
+
 		*/
-		//color = PhongModel(closest_hit.intersection, closest_hit.normal, glm::normalize(-ray.direction), closest_hit.object->getMaterial());
-	}else{
+		color = PhongModel(closest_hit.intersection, closest_hit.normal, glm::normalize(-ray.direction), closest_hit.object->getMaterial());
+	} else {
 		color = glm::vec3(0.0, 0.0, 0.0);
 	}
 	return color;
@@ -209,34 +219,43 @@ glm::vec3 trace_ray(Ray ray){
 /**
  Function defining the scene
  */
-void sceneDefinition (){
+void sceneDefinition () {
 	
-	objects.push_back(new Sphere(1.0, glm::vec3(-0,-2,8), glm::vec3(0.6, 0.9, 0.6)));
-	objects.push_back(new Sphere(1.0, glm::vec3(1,-2,8), glm::vec3(0.6, 0.6, 0.9)));
-	
-	
-	/*
+	// objects.push_back(new Sphere(1.0, glm::vec3(-0,-2,8), glm::vec3(0.6, 0.9, 0.6)));
+	// objects.push_back(new Sphere(1.0, glm::vec3(1,-2,8), glm::vec3(0.6, 0.6, 0.9)));
 				 
-	 Assignment 2
+	//  Assignment 2
 	 
-	 Add here all the objects to the scene. Remember to add them using the new constructor for the sphere with material structure.
-	 You will also need to define the materials.
-	 Example of adding one sphere:
+	//  Add here all the objects to the scene. Remember to add them using the new constructor for the sphere with material structure.
+	//  You will also need to define the materials.
+	//  Example of adding one sphere:
 	 
-	 Material red_specular;
-	 red_specular.diffuse = glm::vec3(1.0f, 0.3f, 0.3f);
-	 red_specular.ambient = glm::vec3(0.01f, 0.03f, 0.03f);
-	 red_specular.specular = glm::vec3(0.5);
-	 red_specular.shininess = 10.0;
-	 
-	 objects.push_back(new Sphere(0.5, glm::vec3(-1,-2.5,6), red_specular));
-	 
-	 
-	 Remember also about adding some lights. For example a white light of intensity 0.4 and position in (0,26,5):
-	 
-	 lights.push_back(new Light(glm::vec3(0, 26, 5), glm::vec3(0.4)));
-	 			 
-	*/
+	Material red_specular;
+	red_specular.diffuse = glm::vec3(1.0f, 0.3f, 0.3f);
+	red_specular.ambient = glm::vec3(0.01f, 0.03f, 0.03f);
+	red_specular.specular = glm::vec3(0.5);
+	red_specular.shininess = 10.0;
+	
+	Material green_specular;
+	green_specular.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
+	green_specular.ambient = glm::vec3(0.07f, 0.09f, 0.07f);
+	green_specular.specular = glm::vec3(0.0);
+	green_specular.shininess = 0.0;
+
+	Material blue_specular;
+	blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue_specular.ambient = glm::vec3(0.07f, 0.07f, 0.1f);
+	blue_specular.specular = glm::vec3(0.6);
+	blue_specular.shininess = 100.0;
+
+	objects.push_back(new Sphere(0.5, glm::vec3(-1,-2.5,6), red_specular));
+	objects.push_back(new Sphere(1.0, glm::vec3(3.0, -2.0, 6.0), green_specular));
+	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue_specular));
+	
+	//  Remember also about adding some lights. For example a white light of intensity 0.4 and position in (0,26,5):
+	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4)));
+	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4)));
+	lights.push_back(new Light(glm::vec3(0.0, 1.0, 12.0), glm::vec3(0.4)));
 }
 
 int main(int argc, const char * argv[]) {
@@ -255,7 +274,7 @@ int main(int argc, const char * argv[]) {
     float X = -s * width / 2;
     float Y = s * height / 2;
     
-    for(int i = 0; i < width ; i++)
+    for(int i = 0; i < width ; i++) {
         for(int j = 0; j < height ; j++){
             
 			float dx = X + i*s + s/2;
@@ -270,7 +289,8 @@ int main(int argc, const char * argv[]) {
 			
 			image.setPixel(i, j, trace_ray(ray));
         }
-    
+	}
+
     t = clock() - t;
     cout<<"It took " << ((float)t)/CLOCKS_PER_SEC<< " seconds to render the image."<< endl;
     cout<<"I could render at "<< (float)CLOCKS_PER_SEC/((float)t) << " frames per second."<<endl;

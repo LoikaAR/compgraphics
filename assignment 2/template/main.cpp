@@ -165,17 +165,18 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 
 	for (auto light : lights) {
 		// calculate total contribution of each light
-		glm::vec3 light_dir = glm::normalize(point - light->position);
-		glm::vec3 reflect_dir = glm::reflect(-light_dir, normal);
-		float first_p = dot(view_direction, reflect_dir) < 0.0 ? 0.0 : dot(view_direction, reflect_dir);
-		
+		glm::vec3 light_dir = glm::normalize(light->position - point);
+		glm::vec3 reflect_dir = glm::normalize(glm::reflect(-light_dir, normal));
+		// first intersection
 		float diff = glm::dot(normal, light_dir) < 0.0 ? 0.0 : glm::dot(normal, light_dir);
-		float spec = pow(first_p, material.shininess);
-		color += diff;
-		color += spec;
-	}
+		float spec = pow(diff, material.shininess);
+		
+		// float r_squared = glm::dot(light->position - point, light->position - point);
 
-	// color += ambient_light;
+		color += material.diffuse * diff * light->color;
+		color += material.specular * spec * light->color;
+		color += material.ambient * ambient_light * light->color;
+	}
 	
 	// The final color has to be clamped so the values do not go beyond 0 and 1.
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
@@ -248,14 +249,14 @@ void sceneDefinition () {
 	blue_specular.specular = glm::vec3(0.6);
 	blue_specular.shininess = 100.0;
 
-	objects.push_back(new Sphere(0.5, glm::vec3(-1,-2.5,6), red_specular));
+	objects.push_back(new Sphere(0.5, glm::vec3(-1.0,-2.5,6.0), red_specular));
 	objects.push_back(new Sphere(1.0, glm::vec3(3.0, -2.0, 6.0), green_specular));
 	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue_specular));
 	
 	//  Remember also about adding some lights. For example a white light of intensity 0.4 and position in (0,26,5):
 	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4)));
-	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4)));
 	lights.push_back(new Light(glm::vec3(0.0, 1.0, 12.0), glm::vec3(0.4)));
+	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4)));
 }
 
 int main(int argc, const char * argv[]) {

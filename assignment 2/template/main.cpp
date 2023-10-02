@@ -167,10 +167,14 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 		// calculate total contribution of each light
 		glm::vec3 light_dir = glm::normalize(light->position - point);
 		glm::vec3 reflect_dir = glm::normalize(glm::reflect(-light_dir, normal));
-		// first intersection
+
 		float diff = glm::dot(normal, light_dir) < 0.0 ? 0.0 : glm::dot(normal, light_dir);
-		float spec = pow(diff, material.shininess);
-		
+
+		float spec_first = glm::dot(view_direction, reflect_dir) > 0.0 ? glm::dot(view_direction, reflect_dir) : 0.0;
+		float spec = pow(spec_first, material.shininess);
+
+		// adding attenuation - for next assignment
+		// to multiply color
 		// float r_squared = glm::dot(light->position - point, light->position - point);
 
 		color += material.diffuse * diff * light->color;
@@ -182,8 +186,8 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 	color = glm::clamp(color, glm::vec3(0.0), glm::vec3(1.0));
 	return color;
 }
-
 /**
+
  Functions that computes a color along the ray
  @param ray Ray that should be traced through the scene
  @return Color at the intersection point
@@ -195,12 +199,12 @@ glm::vec3 trace_ray(Ray ray){
 	closest_hit.hit = false;
 	closest_hit.distance = INFINITY;
 
-	for(int k = 0; k<objects.size(); k++){
+	for (int k = 0; k < objects.size(); k++) {
 		Hit hit = objects[k]->intersect(ray);
-		if(hit.hit == true && hit.distance < closest_hit.distance)
+		if (hit.hit == true && hit.distance < closest_hit.distance)
 			closest_hit = hit;
 	}
-	
+
 	glm::vec3 color(0.0);
 		
 	if(closest_hit.hit) {
@@ -254,9 +258,9 @@ void sceneDefinition () {
 	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue_specular));
 	
 	//  Remember also about adding some lights. For example a white light of intensity 0.4 and position in (0,26,5):
-	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4)));
-	lights.push_back(new Light(glm::vec3(0.0, 1.0, 12.0), glm::vec3(0.4)));
-	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4)));
+	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4))); // above
+	lights.push_back(new Light(glm::vec3(0.0, 1.0, 12.0), glm::vec3(0.4))); // behind
+	lights.push_back(new Light(glm::vec3(0.0, 5.0, 1.0), glm::vec3(0.4))); // in front
 }
 
 int main(int argc, const char * argv[]) {

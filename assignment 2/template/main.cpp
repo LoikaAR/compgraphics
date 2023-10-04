@@ -163,14 +163,12 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec3 view_direction
 	 Outside of the loop add also the ambient component from ambient_light.
 	*/
 
-	for (auto light : lights) {
-		// calculate total contribution of each light
+	for (auto light : lights) { // calculate total contribution of each light
 		glm::vec3 light_dir = glm::normalize(light->position - point);
-		glm::vec3 reflect_dir = glm::normalize(glm::reflect(-light_dir, normal));
-
 		float diff = glm::dot(normal, light_dir) < 0.0 ? 0.0 : glm::dot(normal, light_dir);
 
-		float spec_first = glm::dot(view_direction, reflect_dir) > 0.0 ? glm::dot(view_direction, reflect_dir) : 0.0;
+		glm::vec3 cos_light_normal = glm::normalize(glm::reflect(-light_dir, normal));
+		float spec_first = glm::dot(view_direction, cos_light_normal) > 0.0 ? glm::dot(view_direction, cos_light_normal) : 0.0;
 		float spec = pow(spec_first, material.shininess);
 
 		// adding attenuation - for next assignment
@@ -223,6 +221,7 @@ glm::vec3 trace_ray(Ray ray){
 }
 /**
  Function defining the scene
+ Modified to take in posx
  */
 void sceneDefinition () {
 	
@@ -241,21 +240,31 @@ void sceneDefinition () {
 	red_specular.specular = glm::vec3(0.5);
 	red_specular.shininess = 10.0;
 	
-	Material green_specular;
-	green_specular.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
-	green_specular.ambient = glm::vec3(0.07f, 0.09f, 0.07f);
-	green_specular.specular = glm::vec3(0.0);
-	green_specular.shininess = 0.0;
+	Material green;
+	green.diffuse = glm::vec3(0.7f, 0.9f, 0.7f);
+	green.ambient = glm::vec3(0.07f, 0.09f, 0.07f);
+	green.specular = glm::vec3(0.0);
+	green.shininess = 0.0;
 
-	Material blue_specular;
-	blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
-	blue_specular.ambient = glm::vec3(0.07f, 0.07f, 0.1f);
-	blue_specular.specular = glm::vec3(0.6);
-	blue_specular.shininess = 100.0;
+	Material blue;
+	blue.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
+	blue.ambient = glm::vec3(0.07f, 0.07f, 0.1f);
+	blue.specular = glm::vec3(0.6);
+	blue.shininess = 100.0;
+
+	Material neutral;
+	neutral.diffuse = glm::vec3(0.7);
+	neutral.ambient = glm::vec3(0.7);
+	neutral.specular = glm::vec3(0.9);
+	neutral.shininess = 10.0;
 
 	objects.push_back(new Sphere(0.5, glm::vec3(-1.0,-2.5,6.0), red_specular));
-	objects.push_back(new Sphere(1.0, glm::vec3(3.0, -2.0, 6.0), green_specular));
-	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue_specular));
+	objects.push_back(new Sphere(1.0, glm::vec3(3.0, -2.0, 6.0), green));
+	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue));
+	
+
+	// BONUS
+	// original coords (0.0, 26.0, 5.0)
 	
 	//  Remember also about adding some lights. For example a white light of intensity 0.4 and position in (0,26,5):
 	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4))); // above
@@ -270,8 +279,32 @@ int main(int argc, const char * argv[]) {
     int width = 1024; //width of the image
     int height = 768; // height of the image
     float fov = 90; // field of view
-	
+	float lim = 80.0;
 	sceneDefinition(); // Let's define a scene
+	
+	float pos_x = 0.0;
+	float pos_z = 0.0;
+	if (argc == 2) { // BONUS
+		int num = atoi(argv[1]);
+		float theta = 2*M_PI / 60 * num; // angle between the object and the light src
+		
+		float light_x = lights[0]->position.x;
+		float light_y = lights[0]->position.y;
+		float light_z = lights[0]->position.z;
+
+		float r_const = 18.0; // to modify the radius
+		float r = sqrt(light_x*light_x + light_y*light_y + light_z*light_z) + r_const;
+		pos_x = r * sin(theta);
+		pos_z = r * cos(theta);
+		lights[0]->position = glm::vec3(pos_x, light_y-18, pos_z+20);
+
+		Material neutral;
+		neutral.diffuse = glm::vec3(0.7);
+		neutral.ambient = glm::vec3(0.7);
+		neutral.specular = glm::vec3(0.9);
+		neutral.shininess = 10.0;
+		objects.push_back(new Sphere(0.5, glm::vec3(pos_x, light_y-18, pos_z+20), neutral));
+	}
 	
 	Image image(width,height); // Create an image where we will store the result
     
@@ -281,14 +314,14 @@ int main(int argc, const char * argv[]) {
     
     for(int i = 0; i < width ; i++) {
         for(int j = 0; j < height ; j++){
-            
+
 			float dx = X + i*s + s/2;
             float dy = Y - j*s - s/2;
             float dz = 1;
-			
+
 			glm::vec3 origin(0, 0, 0);
-            glm::vec3 direction(dx, dy, dz);
-            direction = glm::normalize(direction);
+			glm::vec3 direction(dx, dy, dz);
+			direction = glm::normalize(direction);
             
             Ray ray(origin, direction);
 			
@@ -297,13 +330,16 @@ int main(int argc, const char * argv[]) {
 	}
 
     t = clock() - t;
-    cout<<"It took " << ((float)t)/CLOCKS_PER_SEC<< " seconds to render the image."<< endl;
-    cout<<"I could render at "<< (float)CLOCKS_PER_SEC/((float)t) << " frames per second."<<endl;
-    
+	cout << "It took " << ((float)t) / CLOCKS_PER_SEC << " seconds to render the image." << endl;
+	cout << "I could render at " << (float)CLOCKS_PER_SEC / ((float)t) << " frames per second." << endl;
+
 	// Writing the final results of the rendering
-	if (argc == 2){
-		image.writeImage(argv[1]);
-	}else{
+	if (argc == 2) {
+		// argv[1] is just an index
+		std::string hold = "result" + std::string(argv[1]) + ".ppm";
+		const char * out = hold.c_str();
+		image.writeImage(out);
+	} else {
 		image.writeImage("./result.ppm");
 	}
 	

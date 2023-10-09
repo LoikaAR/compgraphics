@@ -263,9 +263,6 @@ void sceneDefinition () {
 	objects.push_back(new Sphere(1.0, glm::vec3(1.0, -2.0, 8.0), blue));
 	
 
-	// BONUS
-	// original coords (0.0, 26.0, 5.0)
-	
 	//  Remember also about adding some lights. For example a white light of intensity 0.4 and position in (0,26,5):
 	lights.push_back(new Light(glm::vec3(0.0, 26.0, 5.0), glm::vec3(0.4))); // above
 	lights.push_back(new Light(glm::vec3(0.0, 1.0, 12.0), glm::vec3(0.4))); // behind
@@ -279,32 +276,7 @@ int main(int argc, const char * argv[]) {
     int width = 1024; //width of the image
     int height = 768; // height of the image
     float fov = 90; // field of view
-	float lim = 80.0;
 	sceneDefinition(); // Let's define a scene
-	
-	float pos_x = 0.0;
-	float pos_z = 0.0;
-	if (argc == 2) { // BONUS
-		int num = atoi(argv[1]);
-		float theta = 2*M_PI / 60 * num; // angle between the object and the light src
-		
-		float light_x = lights[0]->position.x;
-		float light_y = lights[0]->position.y;
-		float light_z = lights[0]->position.z;
-
-		float r_const = 18.0; // to modify the radius
-		float r = sqrt(light_x*light_x + light_y*light_y + light_z*light_z) + r_const;
-		pos_x = r * sin(theta);
-		pos_z = r * cos(theta);
-		lights[0]->position = glm::vec3(pos_x, light_y-18, pos_z+20);
-
-		Material neutral;
-		neutral.diffuse = glm::vec3(0.7);
-		neutral.ambient = glm::vec3(0.7);
-		neutral.specular = glm::vec3(0.9);
-		neutral.shininess = 10.0;
-		objects.push_back(new Sphere(0.5, glm::vec3(pos_x, light_y-18, pos_z+20), neutral));
-	}
 	
 	Image image(width,height); // Create an image where we will store the result
     

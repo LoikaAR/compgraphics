@@ -120,10 +120,21 @@ public:
 			hit.object = this;
 			
 			
-			//  Excercise 2 - computing texture coordintes for the sphere. You can refer to them as s and t, or x and y, whatever you prefer ;)
+			//  Excercise 2 - computing texture coordintes for the sphere. You can refer to them as s and t, or x and y, whatever you prefer ;) Dzięki
 			
-			// hit.uv.s =
-			// hit.uv.t =
+			float theta = glm::asin(hit.normal.y);
+
+			if (theta > M_PI/2) {
+				theta = M_PI/2;
+			} else if (theta < -M_PI/2) {
+				theta = -M_PI/2;
+			}
+
+			float gamma = glm::atan(hit.normal.x/hit.normal.z); // same as atan2(x/z)
+
+
+			hit.uv.x = 0.5 - theta / M_PI;
+			hit.uv.y = 2 * (0.5 + gamma) / (2 * M_PI);
 			 
 
         }
@@ -157,13 +168,15 @@ public:
 
 		float t = glm::dot(po_diff, normal) / glm::dot(ray.direction, normal);
 
-		float dN_dot = glm::dot(ray.direction, normal);
+		// float dN_dot = glm::dot(ray.direction, normal);
 
-		// if (t*dN_dot == 0) {
-		// 	hit.hit = true;
-		// 	hit.intersection = t*ray.direction+ray.origin;
-			
-		// }
+		if (t > 0) {
+			hit.hit = true;
+			hit.intersection = t*ray.direction+ray.origin;
+			hit.normal = glm::normalize(normal);
+			hit.distance = glm::distance(ray.origin, hit.intersection);
+			hit.object = this;
+		}
 
 		return hit;
 	}
@@ -188,7 +201,6 @@ vector<Light *> lights; ///< A list of lights in the scene
 glm::vec3 ambient_light(1.0,1.0,1.0);
 vector<Object *> objects; ///< A list of all objects in the scene
 
-
 /** Function for computing color of an object according to the Phong Model
  @param point A point belonging to the object for which the color is computer
  @param normal A normal vector the the point
@@ -200,37 +212,38 @@ glm::vec3 PhongModel(glm::vec3 point, glm::vec3 normal, glm::vec2 uv, glm::vec3 
 
 	glm::vec3 color(0.0);
 	for(int light_num = 0; light_num < lights.size(); light_num++){
+		Light * light = lights[light_num];
 
 		glm::vec3 light_direction = glm::normalize(lights[light_num]->position - point);
 		glm::vec3 reflected_direction = glm::reflect(-light_direction, normal);
 
 		float NdotL = glm::clamp(glm::dot(normal, light_direction), 0.0f, 1.0f);
 		float VdotR = glm::clamp(glm::dot(view_direction, reflected_direction), 0.0f, 1.0f);
+		
+		// Excercise 2 - Modify the code by adding texturing.
+		// i.e., the diffuse color should be computed using one of the texture functions
+		// according to the texture coordinates stored in the uv variable.
+		// Make sure that the code works also for objects that should not have texture.
 
-		
-		/*
-		 
-		 
-		 Excercise 2 - Modify the code by adding texturing, i.e., the diffuse color should be computed using one of the texture functions according to the texture coordinates stored in the uv variable. Make sure that the code works also for objects that should not have texture.
-		 
-		 
-		 */
-		
-		glm::vec3 diffuse = material.diffuse * glm::vec3(NdotL);
+		glm::vec3 diffuse;
+		if (material.texture == NULL) {
+			diffuse = material.diffuse * glm::vec3(NdotL);
+		} else {
+			diffuse = material.texture(uv) * glm::vec3(NdotL);
+		}
 		glm::vec3 specular = material.specular * glm::vec3(pow(VdotR, material.shininess));
 		
-		
-		/*
-		 
-		 
-		 Excercise 3 - Modify the code by adding attenuation of the light due to distance from the intersection point to the light source
-		 
-		 
-		 
-		 */
-		
+		// Excercise 3 - Modify the code by adding attenuation of the light due to distance
+		// from the intersection point to the light source
 
-		color += lights[light_num]->color * (diffuse + specular);
+		// float r_squared = glm::dot(light->position - point, light->position - point);
+		
+		float distance = glm::distance(point, light->position);
+
+		if (distance < 0.5) distance = 0.5;
+		float attenuation = 1.0 / (distance * distance);
+		
+		color += attenuation + light->color * (diffuse + specular);
 	}
 	color += ambient_light * material.ambient;
 
@@ -284,7 +297,13 @@ void sceneDefinition (){
 	blue_specular.ambient = glm::vec3(0.07f, 0.07f, 0.1f);
 	blue_specular.diffuse = glm::vec3(0.7f, 0.7f, 1.0f);
 	blue_specular.specular = glm::vec3(0.6);
-	blue_specular.shininess = 100.0;
+	blue_specular.shininess = 100.0;	
+	
+	Material neutral;
+	neutral.diffuse = glm::vec3(0.7);
+	neutral.ambient = glm::vec3(0.7);
+	neutral.specular = glm::vec3(0.9);
+	neutral.shininess = 10.0;
 
 
 	objects.push_back(new Sphere(1.0, glm::vec3(1,-2,8), blue_specular));
@@ -293,13 +312,20 @@ void sceneDefinition (){
 	
 	
 	// Excercise 2 - Textured sphere
-	//Material textured;
-	//textured.texture = &checkerboardTexture;
-	//objects.push_back(new Sphere(7.0, glm::vec3(-6,4,23), textured));
-	
+	Material textured;
+	textured.texture = &rainbowTexture;
+	objects.push_back(new Sphere(7.0, glm::vec3(-6,4,23), textured));
 	
 	
 	//  Excercise 1 - Definition of planes and the materials
+	objects.push_back(new Plane(glm::vec3(0,0,-0.1), glm::vec3(0,0,1), green_diffuse));
+	objects.push_back(new Plane(glm::vec3(0,0,30), glm::vec3(0,0,-1), green_diffuse));
+
+	objects.push_back(new Plane(glm::vec3(0,-3,0), glm::vec3(0,1,0)));
+	objects.push_back(new Plane(glm::vec3(0,27,0), glm::vec3(0,-1,0)));
+	
+	objects.push_back(new Plane(glm::vec3(-15,0,0), glm::vec3(1,0,0), red_specular));
+	objects.push_back(new Plane(glm::vec3(15,0,0), glm::vec3(-1,0,0), blue_specular));
 	
 	lights.push_back(new Light(glm::vec3(0, 26, 5), glm::vec3(0.4)));
 	lights.push_back(new Light(glm::vec3(0, 1, 12), glm::vec3(0.4)));
@@ -313,15 +339,24 @@ void sceneDefinition (){
  */
 glm::vec3 toneMapping(glm::vec3 intensity){
 	
+	float alpha = 1.0;
+	float beta = 1.3;
+	float gamma = 1.0;
+
 	glm::vec3 tonemapped = intensity; //tonemapped intensity
+
+	tonemapped = alpha*tonemapped;
+
+	tonemapped.x = glm::pow(tonemapped.x, beta);
+	tonemapped.y = glm::pow(tonemapped.y, beta);
+	tonemapped.z = glm::pow(tonemapped.z, beta);
+
+	tonemapped.x = glm::pow(tonemapped.x, 1/gamma);
+	tonemapped.y = glm::pow(tonemapped.y, 1/gamma);
+	tonemapped.z = glm::pow(tonemapped.z, 1/gamma);
 	
 	/*
-	 
-	 
 	 Excercise 3 - Tone mapping
-	 
-	 
-	 
 	 */
 	
 	return glm::clamp(tonemapped, glm::vec3(0.0), glm::vec3(1.0));

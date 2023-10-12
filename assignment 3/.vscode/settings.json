@@ -1,0 +1,7 @@
+{
+    "cmake.sourceDirectory": "/home/arseni/Desktop/Y3/GRAPHICS/compgraphics/assignment 3/template/glm",
+    "cmake.configureOnOpen": true,
+    "files.associations": {
+        "cmath": "cpp"
+    }
+}
